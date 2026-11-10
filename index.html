@@ -245,6 +245,32 @@
   .kpi-total .kpi-mini .kpi-num{font-size:20px;}
   .kpi-total .kpi-mini .kpi-lbl{font-size:12px;}
 
+
+  /* ---------- Filter panel toggle ---------- */
+  .filter-toggle-bar{
+    max-width:2200px;margin:22px auto 0;
+    padding:0 clamp(16px,3vw,32px);
+    display:flex;align-items:center;gap:10px;
+  }
+  .filter-toggle-btn{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:9px 16px;border-radius:99px;cursor:pointer;
+    border:1.5px solid var(--primary);background:var(--surface);color:var(--primary);
+    font-family:var(--font-body);font-size:13.5px;font-weight:600;
+    transition:background .15s,color .15s;
+  }
+  .filter-toggle-btn:hover{background:var(--primary);color:#fff;}
+  .filter-toggle-btn svg{width:16px;height:16px;flex-shrink:0;}
+  .filter-toggle-btn .ft-count{
+    display:none;min-width:20px;height:20px;padding:0 6px;border-radius:99px;
+    background:var(--alert);color:#fff;font-size:11.5px;line-height:20px;text-align:center;
+  }
+  .layout.filters-hidden .filter-toggle-btn .ft-count.has{display:inline-block;}
+  .layout{transition:grid-template-columns .25s ease;}
+  .layout.filters-hidden{grid-template-columns:minmax(0,1fr);}
+  .layout.filters-hidden > aside.filters{display:none;}
+  .layout + .filter-toggle-bar{display:none;}
+
   /* ---------- Layout ---------- */
   .layout{
     max-width:2200px;margin:26px auto 0;
@@ -719,8 +745,16 @@
 
 <div class="kpi-bento" id="statStrip"></div>
 
-<div class="layout">
-  <aside class="filters card">
+<div class="filter-toggle-bar">
+  <button type="button" class="filter-toggle-btn" id="filterToggleBtn" aria-expanded="true" aria-controls="filterAside">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+    <span id="filterToggleLabel">ซ่อนตัวกรองข้อมูล</span>
+    <span class="ft-count" id="filterActiveCount">0</span>
+  </button>
+</div>
+
+<div class="layout" id="mainLayout">
+  <aside class="filters card" id="filterAside">
     <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>ตัวกรองข้อมูล</h2>
 
     <div class="filter-group">
@@ -3056,6 +3090,54 @@ document.getElementById('themeToggle').addEventListener('click', ()=>{
 // init
 rebuildFilterOptions();
 applyFilters();
+
+// ---------- เปิด/ปิดแผงตัวกรอง (กราฟและแผนที่ขยายตามอัตโนมัติ) ----------
+(function(){
+  const layout = document.getElementById('mainLayout');
+  const btn = document.getElementById('filterToggleBtn');
+  const lbl = document.getElementById('filterToggleLabel');
+  const badge = document.getElementById('filterActiveCount');
+  if(!layout || !btn) return;
+  function activeFilterCount(){
+    try{
+      let n = 0;
+      [typeof selectedProvinces!=='undefined'&&selectedProvinces, typeof selectedAmphoes!=='undefined'&&selectedAmphoes,
+       typeof selectedTambons!=='undefined'&&selectedTambons, typeof selectedAgencies!=='undefined'&&selectedAgencies]
+        .forEach(st=>{ if(st && st.size) n++; });
+      document.querySelectorAll('#filterAside select').forEach(el=>{ if(el.value) n++; });
+      const q = document.getElementById('fSearch'); if(q && q.value.trim()) n++;
+      document.querySelectorAll('#filterAside .chip.active').forEach(c=>{
+        const v = Object.values(c.dataset)[0];
+        if(v!=='all' && v!=='' && v!==undefined) n++;
+      });
+      return n;
+    }catch(e){ return 0; }
+  }
+  function refreshBadge(){
+    const n = activeFilterCount();
+    badge.textContent = n; badge.classList.toggle('has', n>0);
+  }
+  function resizeAll(){
+    try{ Object.values(charts).forEach(c=>{ if(c && c.resize) c.resize(); }); }catch(e){}
+    try{ LeafletMap.onContainerResize(); }catch(e){}
+  }
+  function setHidden(hidden, save){
+    layout.classList.toggle('filters-hidden', hidden);
+    btn.setAttribute('aria-expanded', String(!hidden));
+    lbl.textContent = hidden ? 'แสดงตัวกรองข้อมูล' : 'ซ่อนตัวกรองข้อมูล';
+    refreshBadge();
+    if(save){ try{ localStorage.setItem('filtersHidden', hidden?'1':'0'); }catch(e){} }
+    // รีไซส์หลังเลย์เอาต์เปลี่ยน เพื่อให้กราฟ/แผนที่เต็มพื้นที่ทันที
+    requestAnimationFrame(resizeAll);
+    setTimeout(resizeAll, 300);
+  }
+  btn.addEventListener('click', ()=> setHidden(!layout.classList.contains('filters-hidden'), true));
+  document.addEventListener('change', refreshBadge);
+  document.addEventListener('input', refreshBadge);
+  document.addEventListener('click', ()=> setTimeout(refreshBadge,50));
+  window.addEventListener('resize', ()=> requestAnimationFrame(resizeAll));
+  try{ if(localStorage.getItem('filtersHidden')==='1') setHidden(true,false); }catch(e){}
+})();
 </script>
 </body>
 </html>
