@@ -980,7 +980,7 @@
               <option value="999">ทั้งหมด</option>
             </select>
           </div>
-          <div class="chart-canvas-wrap chart-canvas-tall"><canvas id="chartFactoryType"></canvas></div>
+          <div class="chart-canvas-wrap chart-canvas-tall chart-canvas-vbar" style="min-height:360px;"><canvas id="chartFactoryType"></canvas></div>
           <div class="factory-type-legend" id="factoryTypeLegend"></div>
         </div>
         <div class="chart-box card chart-dumparea">
@@ -990,7 +990,7 @@
             </span>
             <div class="chead-text"><h3>ประเภทพื้นที่การลักลอบทิ้ง</h3><span class="chead-sub" id="dumpAreaChartSub"></span></div>
           </div>
-          <div class="chart-canvas-wrap chart-canvas-tall"><canvas id="chartDumpArea"></canvas></div>
+          <div class="chart-canvas-wrap chart-canvas-tall chart-canvas-vbar" style="min-height:360px;"><canvas id="chartDumpArea"></canvas></div>
         </div>
         <div class="chart-box card chart-waste">
           <div class="chead">
@@ -2694,20 +2694,39 @@ function renderCharts(){
   });
 
   const hLabel = (k)=> String(k).length>26 ? String(k).slice(0,26)+'…' : String(k);
-  const hScales = {
-    x:{beginAtZero:true,ticks:{font:CHART_FONT, precision:0},grid:{color:'rgba(120,130,125,0.15)'},grace:'12%'},
-    y:{ticks:{font:CHART_FONT, autoSkip:false},grid:{display:false}}
+  // กราฟแท่งตั้งแบบเดียวกับกราฟสถานะ: ป้ายชื่อเต็ม ตัดบรรทัดถ้าพื้นที่พอ ไม่พอค่อยเอียง 45°
+  const vbarPrep = (canvasId, keys)=>{
+    const cv = document.getElementById(canvasId);
+    const slotW = ((cv.parentElement.clientWidth||600) - 60) / Math.max(1, keys.length);
+    const rotate = slotW < 85;
+    const MAXL = Math.max(8, Math.floor(slotW/7));
+    const wrap = (k)=>{
+      const lines = [''];
+      String(k).split(/(?<=\s)|(?=\()/).forEach(t=>{
+        while(t.length>MAXL){ if(lines[lines.length-1].trim()) lines.push(''); lines[lines.length-1]=t.slice(0,MAXL); t=t.slice(MAXL); lines.push(''); }
+        if((lines[lines.length-1]+t).trim().length>MAXL) lines.push(t); else lines[lines.length-1]+=t;
+      });
+      return lines.map(x=>x.trim()).filter(Boolean);
+    };
+    return {
+      labels: keys.map(k=> rotate ? String(k) : wrap(k)),
+      scales:{
+        x:{ticks:{font:{family:"'Noto Sans Thai', sans-serif", size:10}, autoSkip:false, maxRotation:rotate?45:0, minRotation:rotate?45:0},grid:{display:false}},
+        y:{beginAtZero:true,ticks:{font:CHART_FONT, precision:0},grid:{color:'rgba(120,130,125,0.15)'},grace:'12%'}
+      }
+    };
   };
+  const vFac = vbarPrep('chartFactoryType', factoryTypeTop.map(([k])=>k));
   charts.factorytype = new Chart(document.getElementById('chartFactoryType'), {
     type:'bar',
-    data:{ labels: factoryTypeTop.map(([k])=> hLabel(k)),
-      datasets:[{data:factoryTypeTop.map(([,v])=>v), backgroundColor: factoryTypeTop.map((_,i)=>VBAR_FACTORY[i%VBAR_FACTORY.length]), borderRadius:5, maxBarThickness:24}] },
-    options:{ indexAxis:'y', layout:{padding:{right:28}}, plugins:{legend:{display:false},
+    data:{ labels: vFac.labels,
+      datasets:[{data:factoryTypeTop.map(([,v])=>v), backgroundColor: factoryTypeTop.map((_,i)=>VBAR_FACTORY[i%VBAR_FACTORY.length]), borderRadius:6, maxBarThickness:70}] },
+    options:{ layout:{padding:{top:22}}, plugins:{legend:{display:false},
         tooltip:{callbacks:{
           title:(items)=> factoryTypeTop[items[0].dataIndex][0],
           afterLabel:(ctx)=>{ const key = factoryTypeTop[ctx.dataIndex][0]; return FACTORY_TYPE_DESC[key] ? FACTORY_TYPE_DESC[key] : undefined; }
         }}},
-      scales:hScales },
+      scales:vFac.scales },
     plugins:[barValuePlugin]
   });
 
@@ -2720,13 +2739,14 @@ function renderCharts(){
     ? 'แสดง '+dumpTop.length+' จาก '+Object.keys(dumpAll).length+' ประเภท · กรณีลักลอบทิ้ง '+dumpRecords.length+' รายการ'
     : 'ไม่มีข้อมูล';
   destroyChart('dumparea');
+  const vDump = vbarPrep('chartDumpArea', dumpTop.map(([k])=>k));
   charts.dumparea = new Chart(document.getElementById('chartDumpArea'), {
     type:'bar',
-    data:{ labels: dumpTop.map(([k])=>hLabel(k)),
-      datasets:[{data:dumpTop.map(([,v])=>v), backgroundColor: dumpTop.map((_,i)=>VBAR_DUMP[i%VBAR_DUMP.length]), borderRadius:5, maxBarThickness:24}] },
-    options:{ indexAxis:'y', layout:{padding:{right:28}}, plugins:{legend:{display:false},
+    data:{ labels: vDump.labels,
+      datasets:[{data:dumpTop.map(([,v])=>v), backgroundColor: dumpTop.map((_,i)=>VBAR_DUMP[i%VBAR_DUMP.length]), borderRadius:6, maxBarThickness:70}] },
+    options:{ layout:{padding:{top:22}}, plugins:{legend:{display:false},
         tooltip:{callbacks:{title:(items)=> dumpTop[items[0].dataIndex][0]}}},
-      scales:hScales },
+      scales:vDump.scales },
     plugins:[barValuePlugin]
   });
 
