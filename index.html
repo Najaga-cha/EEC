@@ -637,6 +637,16 @@
     box-shadow:0 6px 16px -8px color-mix(in srgb, var(--clear) 80%, transparent);
   }
   .btn-export:hover{filter:brightness(1.07);}
+  .exp-overlay{position:fixed;inset:0;background:rgba(10,20,35,.55);z-index:10000;display:none;align-items:center;justify-content:center;padding:16px;}
+  .exp-overlay.show{display:flex;}
+  .exp-box{background:var(--surface);color:var(--text, inherit);border:1px solid var(--line);border-radius:16px;padding:20px;width:100%;max-width:400px;box-shadow:0 20px 50px rgba(0,0,0,.35);}
+  .exp-box h3{margin:0 0 4px;font-size:16px;}
+  .exp-box p.sub{margin:0 0 14px;font-size:12.5px;opacity:.7;}
+  .exp-opt{display:block;width:100%;text-align:left;background:var(--surface-2);color:inherit;border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;cursor:pointer;font:inherit;}
+  .exp-opt:hover{border-color:#16a34a;}
+  .exp-opt b{display:block;font-size:14px;margin-bottom:2px;}
+  .exp-opt span{font-size:12px;opacity:.7;}
+  .exp-cancel{display:block;margin:2px auto 0;background:none;border:none;color:inherit;opacity:.7;cursor:pointer;font:inherit;font-size:12.5px;}
   .topnav-actions .btn-export{padding:7px 14px;border-radius:99px;font-size:12.5px;}
   .table-search{
     padding:9px 12px;border-radius:var(--radius-sm);
@@ -1456,6 +1466,7 @@ function photosHtml(r, size){
   return `<div class="photo-strip ${size||'md'}">${imgs}${more}</div>`;
 }
 
+let RAW_HEADERS = [];
 function transformRawRows(rows){
   const out = [];
   for(let i=1;i<rows.length;i++){
@@ -1486,6 +1497,7 @@ function transformRawRows(rows){
         photos: parsePhotos(r[32], r[33])
       };
     }
+    rec._raw = r;
     out.push(rec);
   }
   return out;
@@ -1544,7 +1556,8 @@ function transformStandardRows(data){
     legalDetail: row.legalDetail || '',
     agency: row.agency || '',
     note: row.note || '',
-    photos: parsePhotos(row.photos, row.photos2)
+    photos: parsePhotos(row.photos, row.photos2),
+    _raw: row._rawRow
   }));
 }
 
@@ -1654,6 +1667,7 @@ function cleanRecords(records){
 function rowsToRecords(rows){
   if(!rows || rows.length < 2) throw new Error('ไม่มีข้อมูลในไฟล์/ชีต');
   const headerJoined = rows[0].map(h=>String(h||'')).join('|');
+  RAW_HEADERS = rows[0].map(h=>h==null?'':h);
   let newData;
   if(headerJoined.indexOf('กรณี') !== -1 && headerJoined.indexOf('ลักลอบ') !== -1){
     newData = transformRawRows(rows);
@@ -1667,7 +1681,7 @@ function rowsToRecords(rows){
       );
     }
     const objs = rows.slice(1).map(r=>{
-      const o = {};
+      const o = {_rawRow: r};
       mappedKeys.forEach((k,i)=>{ if(k) o[k] = r[i]; });
       return o;
     });
@@ -2899,10 +2913,22 @@ function agencyHtml(v){
 }
 
 // ---------- ส่งออกข้อมูลเป็นไฟล์ Excel (ตามตัวกรอง/คำค้นที่เลือกอยู่ ทุกหน้า) ----------
-document.getElementById('exportExcelBtn').addEventListener('click', ()=>{
-  if(typeof XLSX === 'undefined'){ alert('ไลบรารีส่งออก Excel โหลดไม่สำเร็จ กรุณารีเฟรชหน้านี้แล้วลองใหม่'); return; }
-  if(!filtered.length){ alert('ไม่มีข้อมูลให้ส่งออก'); return; }
-  const rows = filtered.slice().sort((a,b)=> (recordDay(b)||'').localeCompare(recordDay(a)||'') || String(b.timestamp).localeCompare(String(a.timestamp)))
+function doExport(mode){
+  const sorted = filtered.slice().sort((a,b)=> (recordDay(b)||'').localeCompare(recordDay(a)||'') || String(b.timestamp).localeCompare(String(a.timestamp)));
+  const d = new Date();
+  const stamp = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  if(mode==='raw' && RAW_HEADERS.length && sorted.every(r=>Array.isArray(r._raw))){
+    // ไฟล์ดิบ: หัวคอลัมน์และค่าเดิมจากชีตต้นฉบับ ไม่ผ่านการทำความสะอาด
+    const ncol = RAW_HEADERS.length;
+    const aoa = [RAW_HEADERS].concat(sorted.map(r=>{ const row = r._raw.slice(0,Math.max(ncol,r._raw.length)); while(row.length<ncol) row.push(''); return row; }));
+    const wsr = XLSX.utils.aoa_to_sheet(aoa);
+    wsr['!cols'] = RAW_HEADERS.map((h,i)=>({wch: Math.min(40, Math.max(String(h).length+2, ...aoa.slice(1,201).map(r=>String(r[i]==null?'':r[i]).length+2)))}));
+    const wbr = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wbr, wsr, 'ข้อมูลดิบ');
+    XLSX.writeFile(wbr, 'ข้อมูลดิบ_EEC_'+stamp+'.xlsx');
+    return;
+  }
+  const rows = sorted
     .map(r=>({
       'วันที่เข้าตรวจสอบ': recordDay(r) || String(r.timestamp).slice(0,10),
       'ประเภท': r.caseType==='dumping' ? 'ลักลอบทิ้ง' : 'โรงงาน',
@@ -2928,10 +2954,24 @@ document.getElementById('exportExcelBtn').addEventListener('click', ()=>{
   ws['!cols'] = keys.map(k=>({wch: Math.min(45, Math.max(k.length+2, ...rows.slice(0,200).map(r=>String(r[k]).length+2)))}));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'รายการกรณี');
-  const d = new Date();
-  const stamp = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   XLSX.writeFile(wb, 'รายการกรณี_EEC_'+stamp+'.xlsx');
-});
+}
+(function(){
+  const ov = document.getElementById('exportChoice');
+  const close = ()=> ov.classList.remove('show');
+  document.getElementById('exportExcelBtn').addEventListener('click', ()=>{
+    if(typeof XLSX === 'undefined'){ alert('ไลบรารีส่งออก Excel โหลดไม่สำเร็จ กรุณารีเฟรชหน้านี้แล้วลองใหม่'); return; }
+    if(!filtered.length){ alert('ไม่มีข้อมูลให้ส่งออก'); return; }
+    ov.classList.add('show');
+  });
+  ov.addEventListener('click', e=>{
+    if(e.target===ov){ close(); return; }
+    const b = e.target.closest('[data-mode]'); if(!b) return;
+    close();
+    if(b.dataset.mode==='raw' || b.dataset.mode==='clean') doExport(b.dataset.mode);
+  });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape') close(); });
+})();
 
 document.getElementById('tablePager').addEventListener('click', (e)=>{
   const b = e.target.closest('.pager-btn'); if(!b || b.disabled) return;
@@ -3160,5 +3200,14 @@ applyFilters();
   try{ if(localStorage.getItem('filtersHidden')==='1') setHidden(true,false); }catch(e){}
 })();
 </script>
+      <div class="exp-overlay" id="exportChoice">
+        <div class="exp-box" role="dialog" aria-modal="true">
+          <h3>เลือกรูปแบบไฟล์ที่จะนำออก</h3>
+          <p class="sub">ข้อมูลตามตัวกรองและคำค้นที่เลือกอยู่</p>
+          <button type="button" class="exp-opt" data-mode="raw"><b>ไฟล์ดิบ</b><span>หัวคอลัมน์และค่าเดิมจากชีตต้นฉบับ ไม่ผ่านการทำความสะอาด</span></button>
+          <button type="button" class="exp-opt" data-mode="clean"><b>ไฟล์ที่จัดระเบียบแล้ว</b><span>แบบเดิม: จัดกลุ่มประเภทของเสีย เพิ่มคอลัมน์ลักษณะ/กลุ่มสถานะ</span></button>
+          <button type="button" class="exp-cancel" data-mode="cancel">ยกเลิก</button>
+        </div>
+      </div>
 </body>
 </html>
