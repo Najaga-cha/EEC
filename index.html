@@ -2680,7 +2680,25 @@ function renderCharts(){
   destroyChart('factorytype');
   const VBAR_FACTORY = ['#4F7BF7','#A78BFA','#F4B76B','#FFD84D','#34C3A0','#F07C8A','#7CC4F5','#9AA5B1'];
   // สถานะคดี — กราฟแท่ง แสดงจำนวนกรณีของสถานะแต่ละประเภทตามที่บันทึกจริงในข้อมูล
-  const statusCounts = tally(filtered.map(r=>{ const s=String(r.status||'').trim(); return s || STATUS_LABEL.clear; }));
+  // รวมสถานะที่เป็นรายการเดียวกัน: แยกด้วย , ; หรือขึ้นบรรทัดใหม่ ตัดรายการซ้ำ และไม่สนลำดับ
+  // (เช่น "อปท., ดำเนินการทางปกครอง, สอจ./กรอ., ดำเนินการทางปกครอง" = "สอจ./กรอ., อปท., ดำเนินการทางปกครอง")
+  const statusCounts = (()=>{
+    const groups = new Map();
+    filtered.forEach(r=>{
+      const raw = String(r.status||'').trim() || STATUS_LABEL.clear;
+      const seen = new Set(), toks = [];
+      raw.split(/[,，;；\n]+/).forEach(t=>{
+        t = t.replace(/\s+/g,' ').trim();
+        if(t && !seen.has(t)){ seen.add(t); toks.push(t); }
+      });
+      const key = toks.slice().sort().join('|');
+      const g = groups.get(key);
+      if(g) g.n++; else groups.set(key, {label: toks.join(', '), n:1});
+    });
+    const o = {};
+    groups.forEach(g=>{ o[g.label] = g.n; });
+    return o;
+  })();
   const statusEntries = Object.entries(statusCounts).sort((a,b)=>{
     if(a[0]===STATUS_LABEL.clear) return -1;
     if(b[0]===STATUS_LABEL.clear) return 1;
