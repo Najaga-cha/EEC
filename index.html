@@ -537,27 +537,22 @@
     grid-template-areas:
       "province province province province province province amphoe amphoe amphoe amphoe amphoe amphoe"
       "status status status status status status status status status status status status"
-      "factorytype factorytype factorytype factorytype dumparea dumparea dumparea dumparea waste waste waste waste"
-      "ftlegend ftlegend ftlegend ftlegend ftlegend ftlegend ftlegend ftlegend ftlegend ftlegend ftlegend ftlegend";
+      "factorytype factorytype factorytype factorytype dumparea dumparea dumparea dumparea waste waste waste waste";
     gap:16px;
   }
   @media (max-width:1180px){
     .charts-grid{
       grid-template-columns:repeat(2,minmax(0,1fr));
-      grid-template-areas:"province province" "amphoe amphoe" "status status" "factorytype dumparea" "waste waste" "ftlegend ftlegend";
+      grid-template-areas:"province province" "amphoe amphoe" "status status" "factorytype dumparea" "waste waste";
     }
   }
   @media (max-width:760px){
     .charts-grid{
       grid-template-columns:1fr;
-      grid-template-areas:"province" "amphoe" "status" "factorytype" "dumparea" "waste" "ftlegend";
+      grid-template-areas:"province" "amphoe" "status" "factorytype" "dumparea" "waste";
     }
   }
   .chart-waste{grid-area:waste;}
-  .chart-ftlegend{grid-area:ftlegend;}
-  .chart-ftlegend .factory-type-legend{display:block;column-count:2;column-gap:36px;margin:0;padding:0;border:none;}
-  .chart-ftlegend .ftl-item, .chart-ftlegend .ftl-note{break-inside:avoid;margin-bottom:6px;}
-  @media (max-width:760px){ .chart-ftlegend .factory-type-legend{column-count:1;} }
   .chart-amphoe{grid-area:amphoe;}
   .chart-status{grid-area:status;}
   .chart-province{grid-area:province;}
@@ -584,7 +579,6 @@
   .topn-select:focus{outline:2px solid var(--primary);outline-offset:1px;}
   .chart-canvas-wrap{position:relative;flex:1;min-height:240px;}
   .chart-canvas-tall{min-height:320px;}
-  .chart-factorytype .chead, .chart-dumparea .chead, .chart-waste .chead{min-height:96px;}
   .chart-canvas-donut{min-height:220px;display:flex;align-items:center;}
   .chart-box canvas{max-height:100%;}
   .factory-type-legend{
@@ -952,8 +946,9 @@
               <option value="999">ทั้งหมด</option>
             </select>
           </div>
-          <div class="chart-canvas-wrap chart-canvas-tall" style="flex:none;min-height:0;height:360px;"><canvas id="chartFactoryType"></canvas></div>
-          </div>
+          <div class="chart-canvas-wrap chart-canvas-tall"><canvas id="chartFactoryType"></canvas></div>
+          <div class="factory-type-legend" id="factoryTypeLegend"></div>
+        </div>
         <div class="chart-box card chart-dumparea">
           <div class="chead">
             <span class="ic" style="background:var(--alert-soft);color:var(--alert);">
@@ -961,7 +956,7 @@
             </span>
             <div class="chead-text"><h3>ประเภทพื้นที่การลักลอบทิ้ง</h3><span class="chead-sub" id="dumpAreaChartSub"></span></div>
           </div>
-          <div class="chart-canvas-wrap chart-canvas-tall" style="flex:none;min-height:0;height:360px;"><canvas id="chartDumpArea"></canvas></div>
+          <div class="chart-canvas-wrap chart-canvas-tall"><canvas id="chartDumpArea"></canvas></div>
         </div>
         <div class="chart-box card chart-waste">
           <div class="chead">
@@ -977,11 +972,7 @@
               <option value="999">ทั้งหมด</option>
             </select>
           </div>
-          <div class="chart-canvas-wrap chart-canvas-tall" style="flex:none;min-height:0;height:360px;"><canvas id="chartWaste"></canvas></div>
-        </div>
-        <div class="chart-box card chart-ftlegend" style="display:none;">
-          <div class="chead" style="margin-bottom:10px;"><div class="chead-text"><h3>คำอธิบายลำดับโรงงาน</h3></div></div>
-          <div class="factory-type-legend" id="factoryTypeLegend"></div>
+          <div class="chart-canvas-wrap chart-canvas-tall"><canvas id="chartWaste"></canvas></div>
         </div>
       </div>
     </section>
@@ -2629,20 +2620,6 @@ function renderCharts(){
     : 'ไม่มีข้อมูล';
   destroyChart('factorytype');
   const VBAR_FACTORY = ['#4F7BF7','#A78BFA','#F4B76B','#FFD84D','#34C3A0','#F07C8A','#7CC4F5','#9AA5B1'];
-  const thSeg = (typeof Intl!=='undefined' && Intl.Segmenter) ? new Intl.Segmenter('th',{granularity:'word'}) : null;
-  const vbarLabel = (k, MAXL=10, MAXLINES=3)=>{
-    const str = String(k);
-    const toks = thSeg ? Array.from(thSeg.segment(str), x=>x.segment) : str.split(/(?<=[\/ ])/);
-    const lines=[''];
-    toks.forEach(t=>{
-      while(t.length>MAXL){ if(lines[lines.length-1].trim()) lines.push(''); lines[lines.length-1]=t.slice(0,MAXL); t=t.slice(MAXL); lines.push(''); }
-      if((lines[lines.length-1]+t).trim().length>MAXL) lines.push(t); else lines[lines.length-1]+=t;
-    });
-    const out=lines.map(x=>x.trim()).filter(Boolean);
-    if(out.length>MAXLINES){ out.length=MAXLINES; out[MAXLINES-1]=out[MAXLINES-1].slice(0,MAXL-1)+'…'; }
-    return out;
-  };
-  const vbarScales = {x:{ticks:{font:{family:"'Noto Sans Thai', sans-serif", size:10}, autoSkip:false, maxRotation:0},grid:{display:false}}, y:{beginAtZero:true,ticks:{font:CHART_FONT, precision:0},grid:{color:'rgba(120,130,125,0.15)'},grace:'12%'}};
   // สถานะคดี — กราฟแท่ง แสดงจำนวนกรณีของสถานะแต่ละประเภทตามที่บันทึกจริงในข้อมูล
   const statusCounts = tally(filtered.map(r=>{ const s=String(r.status||'').trim(); return s || STATUS_LABEL.clear; }));
   const statusEntries = Object.entries(statusCounts).sort((a,b)=>{
@@ -2682,16 +2659,21 @@ function renderCharts(){
     plugins:[barValuePlugin]
   });
 
+  const hLabel = (k)=> String(k).length>26 ? String(k).slice(0,26)+'…' : String(k);
+  const hScales = {
+    x:{beginAtZero:true,ticks:{font:CHART_FONT, precision:0},grid:{color:'rgba(120,130,125,0.15)'},grace:'12%'},
+    y:{ticks:{font:CHART_FONT, autoSkip:false},grid:{display:false}}
+  };
   charts.factorytype = new Chart(document.getElementById('chartFactoryType'), {
     type:'bar',
-    data:{ labels: factoryTypeTop.map(([k])=> vbarLabel(k)),
-      datasets:[{data:factoryTypeTop.map(([,v])=>v), backgroundColor: factoryTypeTop.map((_,i)=>VBAR_FACTORY[i%VBAR_FACTORY.length]), borderRadius:6, maxBarThickness:70}] },
-    options:{ layout:{padding:{top:20}}, plugins:{legend:{display:false},
+    data:{ labels: factoryTypeTop.map(([k])=> hLabel(k)),
+      datasets:[{data:factoryTypeTop.map(([,v])=>v), backgroundColor: factoryTypeTop.map((_,i)=>VBAR_FACTORY[i%VBAR_FACTORY.length]), borderRadius:5, maxBarThickness:24}] },
+    options:{ indexAxis:'y', layout:{padding:{right:28}}, plugins:{legend:{display:false},
         tooltip:{callbacks:{
           title:(items)=> factoryTypeTop[items[0].dataIndex][0],
           afterLabel:(ctx)=>{ const key = factoryTypeTop[ctx.dataIndex][0]; return FACTORY_TYPE_DESC[key] ? FACTORY_TYPE_DESC[key] : undefined; }
         }}},
-      scales:vbarScales },
+      scales:hScales },
     plugins:[barValuePlugin]
   });
 
@@ -2706,19 +2688,15 @@ function renderCharts(){
   destroyChart('dumparea');
   charts.dumparea = new Chart(document.getElementById('chartDumpArea'), {
     type:'bar',
-    data:{ labels: dumpTop.map(([k])=>vbarLabel(k)),
-      datasets:[{data:dumpTop.map(([,v])=>v), backgroundColor: dumpTop.map((_,i)=>VBAR_DUMP[i%VBAR_DUMP.length]), borderRadius:6, maxBarThickness:70}] },
-    options:{ layout:{padding:{top:20}}, plugins:{legend:{display:false},
+    data:{ labels: dumpTop.map(([k])=>hLabel(k)),
+      datasets:[{data:dumpTop.map(([,v])=>v), backgroundColor: dumpTop.map((_,i)=>VBAR_DUMP[i%VBAR_DUMP.length]), borderRadius:5, maxBarThickness:24}] },
+    options:{ indexAxis:'y', layout:{padding:{right:28}}, plugins:{legend:{display:false},
         tooltip:{callbacks:{title:(items)=> dumpTop[items[0].dataIndex][0]}}},
-      scales:vbarScales },
+      scales:hScales },
     plugins:[barValuePlugin]
   });
 
-  // การ์ดทั้ง 3 ใบสูงเท่ากัน: 360px ขั้นต่ำ และขยายตามจำนวนแท่งเมื่อเลือกดูหลายอันดับ
-  const bottomH = Math.max(360, Math.max(wasteTop.length, factoryTypeTop.length, dumpTop.length)*30+70);
-  ['chartWaste','chartFactoryType','chartDumpArea'].forEach(id=>{ document.getElementById(id).parentElement.style.height = bottomH+'px'; });
-
-  // แสดงคำอธิบายลำดับที่โรงงานที่พบในข้อมูล (นอกเหนือจาก tooltip) เพื่อให้อ่านเข้าใจได้ทันทีโดยไม่ต้องชี้เมาส์
+  // แสดงคำอธิบายลำดับที่โรงงานที่พบในข้อมูลไว้ใต้กราฟ (นอกเหนือจาก tooltip) เพื่อให้อ่านเข้าใจได้ทันทีโดยไม่ต้องชี้เมาส์
   const factoryTypeLegendEl = document.getElementById('factoryTypeLegend');
   if(factoryTypeLegendEl){
     const knownLines = factoryTypeTop
@@ -2731,8 +2709,6 @@ function renderCharts(){
       html += `<div class="ftl-note">ลำดับอื่นๆ ที่ปรากฏในข้อมูลอ้างอิงประเภท/ชนิดโรงงานตามบัญชีท้ายกฎกระทรวง (พ.ร.บ.โรงงาน พ.ศ. 2535) ซึ่งมีทั้งหมด 106 ลำดับ — ดูรายละเอียดฉบับเต็มได้ที่เว็บไซต์กรมโรงงานอุตสาหกรรม (diw.go.th)</div>`;
     }
     factoryTypeLegendEl.innerHTML = html;
-    const ftCard = factoryTypeLegendEl.closest('.chart-ftlegend');
-    if(ftCard) ftCard.style.display = html ? '' : 'none';
   }
 }
 
