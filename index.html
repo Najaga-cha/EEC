@@ -581,12 +581,6 @@
   .chart-canvas-tall{min-height:320px;}
   .chart-canvas-donut{min-height:220px;display:flex;align-items:center;}
   .chart-box canvas{max-height:100%;}
-  .ftl-details{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);}
-  .ftl-details summary{cursor:pointer;font-size:12.5px;font-weight:500;color:var(--primary);list-style:none;user-select:none;}
-  .ftl-details summary::-webkit-details-marker{display:none;}
-  .ftl-details summary::before{content:'▸ ';}
-  .ftl-details[open] summary::before{content:'▾ ';}
-  .ftl-details .factory-type-legend{border-top:none;margin-top:10px;padding-top:0;}
   .factory-type-legend{
     margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);
     font-size:12px;color:var(--ink-soft);display:flex;flex-direction:column;gap:5px;
@@ -953,7 +947,7 @@
             </select>
           </div>
           <div class="chart-canvas-wrap chart-canvas-tall"><canvas id="chartFactoryType"></canvas></div>
-          <details class="ftl-details"><summary>คำอธิบายลำดับโรงงาน</summary><div class="factory-type-legend" id="factoryTypeLegend"></div></details>
+          <div class="factory-type-legend" id="factoryTypeLegend"></div>
         </div>
         <div class="chart-box card chart-dumparea">
           <div class="chead">
@@ -2544,7 +2538,6 @@ function renderCharts(){
   const CHART_FONT = {family:"'Noto Sans Thai', sans-serif", size:11};
   const colors = statusColor();
   Chart.defaults.color = fontColor;
-  Chart.defaults.plugins.legend.labels.color = fontColor;
   Chart.defaults.maintainAspectRatio = false;
   Chart.defaults.borderColor = 'rgba(120,130,125,0.15)';
 
@@ -2643,9 +2636,9 @@ function renderCharts(){
   // ถ้าพื้นที่ต่อแท่งพอ ให้ตัดบรรทัดป้ายชื่อแนวนอน (อ่านง่าย) ไม่พอค่อยเอียง 45°
   const statusCanvas = document.getElementById('chartStatus');
   const slotW = ((statusCanvas.parentElement.clientWidth||900) - 60) / Math.max(1, statusEntries.length);
-  const statusRotate = slotW < 80;
+  const statusRotate = slotW < 105;
   const wrapStatus = (k)=>{
-    const MAXL = 16, lines = [''];
+    const MAXL = 18, lines = [''];
     String(k).split(/(?<=\s)|(?=\()/).forEach(t=>{
       while(t.length>MAXL){ if(lines[lines.length-1].trim()) lines.push(''); lines[lines.length-1]=t.slice(0,MAXL); t=t.slice(MAXL); lines.push(''); }
       if((lines[lines.length-1]+t).trim().length>MAXL) lines.push(t); else lines[lines.length-1]+=t;
@@ -2666,8 +2659,7 @@ function renderCharts(){
     plugins:[barValuePlugin]
   });
 
-  const hFull = (k)=> String(k)==='-' ? 'ไม่ระบุลำดับ' : String(k);
-  const hLabel = (k)=> hFull(k).length>26 ? hFull(k).slice(0,26)+'…' : hFull(k);
+  const hLabel = (k)=> String(k).length>26 ? String(k).slice(0,26)+'…' : String(k);
   const hScales = {
     x:{beginAtZero:true,ticks:{font:CHART_FONT, precision:0},grid:{color:'rgba(120,130,125,0.15)'},grace:'12%'},
     y:{ticks:{font:CHART_FONT, autoSkip:false},grid:{display:false}}
@@ -2678,7 +2670,7 @@ function renderCharts(){
       datasets:[{data:factoryTypeTop.map(([,v])=>v), backgroundColor: factoryTypeTop.map((_,i)=>VBAR_FACTORY[i%VBAR_FACTORY.length]), borderRadius:5, maxBarThickness:24}] },
     options:{ indexAxis:'y', layout:{padding:{right:28}}, plugins:{legend:{display:false},
         tooltip:{callbacks:{
-          title:(items)=> hFull(factoryTypeTop[items[0].dataIndex][0]),
+          title:(items)=> factoryTypeTop[items[0].dataIndex][0],
           afterLabel:(ctx)=>{ const key = factoryTypeTop[ctx.dataIndex][0]; return FACTORY_TYPE_DESC[key] ? FACTORY_TYPE_DESC[key] : undefined; }
         }}},
       scales:hScales },
@@ -2702,13 +2694,6 @@ function renderCharts(){
         tooltip:{callbacks:{title:(items)=> dumpTop[items[0].dataIndex][0]}}},
       scales:hScales },
     plugins:[barValuePlugin]
-  });
-
-  // ทำให้การ์ดทั้ง 3 ใบแถวล่างสูงเท่ากัน (สูงตามจำนวนแท่งที่มากที่สุด) กราฟจึงไม่ยืดจนแท่งห่างกันเกินไป
-  const bottomH = Math.max(340, Math.max(wasteTop.length, factoryTypeTop.length, dumpTop.length)*36+90);
-  ['chartWaste','chartFactoryType','chartDumpArea'].forEach(id=>{
-    const w = document.getElementById(id).parentElement;
-    w.style.flex='none'; w.style.minHeight='0'; w.style.height = bottomH+'px';
   });
 
   // แสดงคำอธิบายลำดับที่โรงงานที่พบในข้อมูลไว้ใต้กราฟ (นอกเหนือจาก tooltip) เพื่อให้อ่านเข้าใจได้ทันทีโดยไม่ต้องชี้เมาส์
@@ -3029,8 +3014,6 @@ function sha256Js(msg){
 // theme toggle
 const SUN_PATH = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>';
 const MOON_PATH = '<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>';
-let __rsT;
-window.addEventListener('resize', ()=>{ clearTimeout(__rsT); __rsT = setTimeout(()=>{ if(Object.keys(charts).length) renderCharts(); }, 250); });
 function applyTheme(t){
   document.body.setAttribute('data-theme', t);
   document.getElementById('themeIcon').innerHTML = t === 'dark' ? MOON_PATH : SUN_PATH;
