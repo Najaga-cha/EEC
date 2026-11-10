@@ -2680,23 +2680,18 @@ function renderCharts(){
   destroyChart('factorytype');
   const VBAR_FACTORY = ['#4F7BF7','#A78BFA','#F4B76B','#FFD84D','#34C3A0','#F07C8A','#7CC4F5','#9AA5B1'];
   // สถานะคดี — กราฟแท่ง แสดงจำนวนกรณีของสถานะแต่ละประเภทตามที่บันทึกจริงในข้อมูล
-  // รวมสถานะที่เป็นรายการเดียวกัน: แยกด้วย , ; หรือขึ้นบรรทัดใหม่ ตัดรายการซ้ำ และไม่สนลำดับ
-  // (เช่น "อปท., ดำเนินการทางปกครอง, สอจ./กรอ., ดำเนินการทางปกครอง" = "สอจ./กรอ., อปท., ดำเนินการทางปกครอง")
+  // แยกสถานะคดีทีละรายการ: ช่องสถานะเลือกได้หลายข้อ (คั่นด้วย , ; หรือขึ้นบรรทัดใหม่) จึงนับแต่ละสถานะแยกกัน
+  // กรณีหนึ่งที่มีหลายสถานะจะถูกนับในทุกสถานะนั้น (ตัดรายการซ้ำภายในกรณีเดียวกัน)
   const statusCounts = (()=>{
-    const groups = new Map();
+    const o = {};
     filtered.forEach(r=>{
       const raw = String(r.status||'').trim() || STATUS_LABEL.clear;
-      const seen = new Set(), toks = [];
+      const seen = new Set();
       raw.split(/[,，;；\n]+/).forEach(t=>{
         t = t.replace(/\s+/g,' ').trim();
-        if(t && !seen.has(t)){ seen.add(t); toks.push(t); }
+        if(t && !seen.has(t)){ seen.add(t); o[t] = (o[t]||0)+1; }
       });
-      const key = toks.slice().sort().join('|');
-      const g = groups.get(key);
-      if(g) g.n++; else groups.set(key, {label: toks.join(', '), n:1});
     });
-    const o = {};
-    groups.forEach(g=>{ o[g.label] = g.n; });
     return o;
   })();
   const statusEntries = Object.entries(statusCounts).sort((a,b)=>{
@@ -2704,10 +2699,10 @@ function renderCharts(){
     if(b[0]===STATUS_LABEL.clear) return 1;
     return b[1]-a[1];
   });
-  const statusTotal = statusEntries.reduce((s,[,v])=>s+v,0);
+  const statusTotal = filtered.length; // จำนวนกรณีทั้งหมด (1 กรณีอาจมีหลายสถานะ จึงรวมแท่งแล้วอาจเกินจำนวนกรณี)
   const VBAR_STATUS = ['#4F7BF7','#A78BFA','#F4B76B','#FFD84D','#F07C8A','#E879C6','#5DD6D6','#5FC77F','#7FAE41','#9A9A0A'];
   document.getElementById('statusChartSub').textContent = statusEntries.length
-    ? 'รวม '+statusTotal+' กรณี · '+statusEntries.length+' สถานะ'
+    ? 'จาก '+statusTotal+' กรณี · '+statusEntries.length+' สถานะ (1 กรณีอาจมีได้หลายสถานะ)'
     : 'ไม่มีข้อมูล';
   destroyChart('status');
   // ถ้าพื้นที่ต่อแท่งพอ ให้ตัดบรรทัดป้ายชื่อแนวนอน (อ่านง่าย) ไม่พอค่อยเอียง 45°
