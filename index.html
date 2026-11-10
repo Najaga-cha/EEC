@@ -617,7 +617,23 @@
     font-family:var(--font-body);font-size:13px;width:260px;max-width:100%;
   }
   table.case-table{width:100%;table-layout:auto;border-collapse:collapse;font-size:13px;}
-  table.case-table td{word-break:break-word;overflow-wrap:anywhere;}
+  table.case-table td{word-break:normal;overflow-wrap:break-word;line-height:1.5;}
+  table.case-table th:nth-child(1){min-width:104px;}
+  table.case-table th:nth-child(2){min-width:88px;}
+  table.case-table th:nth-child(3){min-width:140px;}
+  table.case-table th:nth-child(4){min-width:280px;width:30%;}
+  table.case-table th:nth-child(5){min-width:130px;}
+  table.case-table th:nth-child(6){min-width:170px;}
+  table.case-table th:nth-child(7){min-width:104px;}
+  table.case-table th:nth-child(8){min-width:150px;}
+  table.case-table th:nth-child(9){min-width:64px;}
+  table.case-table th:nth-child(10){min-width:108px;}
+  table.case-table td:nth-child(3), table.case-table td:nth-child(7){white-space:nowrap;}
+  .cell-clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+  .loc-main{font-weight:500;color:var(--ink);}
+  .loc-sub{font-size:12px;color:var(--ink-soft);}
+  .cell-clamp a{color:var(--primary);text-decoration:none;font-weight:500;}
+  .cell-clamp a:hover{text-decoration:underline;}
   table.case-table th{
     text-align:left;font-size:11px;color:var(--ink-soft);font-weight:600;
     border-bottom:1px solid var(--line);padding:9px 10px;white-space:normal;
@@ -649,7 +665,7 @@
   }
   .kind-tag.registry{background:var(--surface-2);color:var(--ink-soft);border:1px solid var(--line);}
   .kind-tag.incident{background:var(--alert-soft);color:var(--alert);}
-  .table-scroll{overflow:visible;width:100%;}
+  .table-scroll{overflow-x:auto;width:100%;}
   .detail-row td{background:var(--surface-2);}
   .detail-grid{
     display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
@@ -915,7 +931,7 @@
             </span>
             <div class="chead-text"><h3>สถานะคดี</h3><span class="chead-sub" id="statusChartSub"></span></div>
           </div>
-          <div class="chart-canvas-wrap chart-canvas-tall chart-canvas-vbar" style="min-height:380px;"><canvas id="chartStatus"></canvas></div>
+          <div class="chart-canvas-wrap chart-canvas-tall chart-canvas-vbar" style="min-height:360px;"><canvas id="chartStatus"></canvas></div>
         </div>
         <div class="chart-box card chart-factorytype">
           <div class="chead">
@@ -930,7 +946,7 @@
               <option value="999">ทั้งหมด</option>
             </select>
           </div>
-          <div class="chart-canvas-wrap chart-canvas-tall chart-canvas-vbar"><canvas id="chartFactoryType"></canvas></div>
+          <div class="chart-canvas-wrap chart-canvas-tall"><canvas id="chartFactoryType"></canvas></div>
           <div class="factory-type-legend" id="factoryTypeLegend"></div>
         </div>
         <div class="chart-box card chart-dumparea">
@@ -940,7 +956,7 @@
             </span>
             <div class="chead-text"><h3>ประเภทพื้นที่การลักลอบทิ้ง</h3><span class="chead-sub" id="dumpAreaChartSub"></span></div>
           </div>
-          <div class="chart-canvas-wrap chart-canvas-tall chart-canvas-vbar"><canvas id="chartDumpArea"></canvas></div>
+          <div class="chart-canvas-wrap chart-canvas-tall"><canvas id="chartDumpArea"></canvas></div>
         </div>
         <div class="chart-box card chart-waste">
           <div class="chead">
@@ -2604,17 +2620,6 @@ function renderCharts(){
     : 'ไม่มีข้อมูล';
   destroyChart('factorytype');
   const VBAR_FACTORY = ['#4F7BF7','#A78BFA','#F4B76B','#FFD84D','#34C3A0','#F07C8A','#7CC4F5','#9AA5B1'];
-  const vbarLabel = (k)=>{
-    const MAXL=14, MAXLINES=3, toks=String(k).split(/(?<=[\/ ])/), lines=[''];
-    toks.forEach(t=>{
-      while(t.length>MAXL){ if(lines[lines.length-1]) lines.push(''); lines[lines.length-1]=t.slice(0,MAXL); t=t.slice(MAXL); lines.push(''); }
-      if((lines[lines.length-1]+t).trim().length>MAXL) lines.push(t); else lines[lines.length-1]+=t;
-    });
-    const out=lines.map(x=>x.trim()).filter(Boolean);
-    if(out.length>MAXLINES){ out.length=MAXLINES; out[MAXLINES-1]=out[MAXLINES-1].slice(0,MAXL-1)+'…'; }
-    return out;
-  };
-  const vbarScales = {x:{ticks:{font:{family:"'Noto Sans Thai', sans-serif", size:10}, autoSkip:false, maxRotation:0},grid:{display:false}}, y:{beginAtZero:true,ticks:{font:CHART_FONT, precision:0},grid:{color:'rgba(120,130,125,0.15)'},grace:'12%'}};
   // สถานะคดี — กราฟแท่ง แสดงจำนวนกรณีของสถานะแต่ละประเภทตามที่บันทึกจริงในข้อมูล
   const statusCounts = tally(filtered.map(r=>{ const s=String(r.status||'').trim(); return s || STATUS_LABEL.clear; }));
   const statusEntries = Object.entries(statusCounts).sort((a,b)=>{
@@ -2628,29 +2633,47 @@ function renderCharts(){
     ? 'รวม '+statusTotal+' กรณี · '+statusEntries.length+' สถานะ'
     : 'ไม่มีข้อมูล';
   destroyChart('status');
+  // ถ้าพื้นที่ต่อแท่งพอ ให้ตัดบรรทัดป้ายชื่อแนวนอน (อ่านง่าย) ไม่พอค่อยเอียง 45°
+  const statusCanvas = document.getElementById('chartStatus');
+  const slotW = ((statusCanvas.parentElement.clientWidth||900) - 60) / Math.max(1, statusEntries.length);
+  const statusRotate = slotW < 105;
+  const wrapStatus = (k)=>{
+    const MAXL = 18, lines = [''];
+    String(k).split(/(?<=\s)|(?=\()/).forEach(t=>{
+      while(t.length>MAXL){ if(lines[lines.length-1].trim()) lines.push(''); lines[lines.length-1]=t.slice(0,MAXL); t=t.slice(MAXL); lines.push(''); }
+      if((lines[lines.length-1]+t).trim().length>MAXL) lines.push(t); else lines[lines.length-1]+=t;
+    });
+    return lines.map(x=>x.trim()).filter(Boolean);
+  };
+  const statusLabels = statusEntries.map(([k])=> statusRotate ? k : wrapStatus(k));
   charts.status = new Chart(document.getElementById('chartStatus'), {
     type:'bar',
-    data:{ labels: statusEntries.map(([k])=>k),
+    data:{ labels: statusLabels,
       datasets:[{data:statusEntries.map(([,v])=>v), backgroundColor: statusEntries.map((_,i)=>VBAR_STATUS[i%VBAR_STATUS.length]), borderRadius:6, maxBarThickness:70}] },
     options:{ layout:{padding:{top:20}}, plugins:{legend:{display:false},
-        tooltip:{callbacks:{label:(ctx)=> ctx.parsed.y+' กรณี ('+(statusTotal? Math.round(ctx.parsed.y/statusTotal*100):0)+'%)'}}},
+        tooltip:{callbacks:{title:(items)=> statusEntries[items[0].dataIndex][0], label:(ctx)=> ctx.parsed.y+' กรณี ('+(statusTotal? Math.round(ctx.parsed.y/statusTotal*100):0)+'%)'}}},
       scales:{
-        x:{ticks:{font:{family:"'Noto Sans Thai', sans-serif", size:10}, autoSkip:false, maxRotation:45, minRotation:45},grid:{display:false}},
+        x:{ticks:{font:{family:"'Noto Sans Thai', sans-serif", size:10}, autoSkip:false, maxRotation:statusRotate?45:0, minRotation:statusRotate?45:0},grid:{display:false}},
         y:{beginAtZero:true,ticks:{font:CHART_FONT, precision:0},grid:{color:'rgba(120,130,125,0.15)'},grace:'12%'}
       } },
     plugins:[barValuePlugin]
   });
 
+  const hLabel = (k)=> String(k).length>26 ? String(k).slice(0,26)+'…' : String(k);
+  const hScales = {
+    x:{beginAtZero:true,ticks:{font:CHART_FONT, precision:0},grid:{color:'rgba(120,130,125,0.15)'},grace:'12%'},
+    y:{ticks:{font:CHART_FONT, autoSkip:false},grid:{display:false}}
+  };
   charts.factorytype = new Chart(document.getElementById('chartFactoryType'), {
     type:'bar',
-    data:{ labels: factoryTypeTop.map(([k])=> vbarLabel(k)),
-      datasets:[{data:factoryTypeTop.map(([,v])=>v), backgroundColor: factoryTypeTop.map((_,i)=>VBAR_FACTORY[i%VBAR_FACTORY.length]), borderRadius:6, maxBarThickness:70}] },
-    options:{ layout:{padding:{top:20}}, plugins:{legend:{display:false},
+    data:{ labels: factoryTypeTop.map(([k])=> hLabel(k)),
+      datasets:[{data:factoryTypeTop.map(([,v])=>v), backgroundColor: factoryTypeTop.map((_,i)=>VBAR_FACTORY[i%VBAR_FACTORY.length]), borderRadius:5, maxBarThickness:24}] },
+    options:{ indexAxis:'y', layout:{padding:{right:28}}, plugins:{legend:{display:false},
         tooltip:{callbacks:{
           title:(items)=> factoryTypeTop[items[0].dataIndex][0],
           afterLabel:(ctx)=>{ const key = factoryTypeTop[ctx.dataIndex][0]; return FACTORY_TYPE_DESC[key] ? FACTORY_TYPE_DESC[key] : undefined; }
         }}},
-      scales:vbarScales },
+      scales:hScales },
     plugins:[barValuePlugin]
   });
 
@@ -2665,11 +2688,11 @@ function renderCharts(){
   destroyChart('dumparea');
   charts.dumparea = new Chart(document.getElementById('chartDumpArea'), {
     type:'bar',
-    data:{ labels: dumpTop.map(([k])=>vbarLabel(k)),
-      datasets:[{data:dumpTop.map(([,v])=>v), backgroundColor: dumpTop.map((_,i)=>VBAR_DUMP[i%VBAR_DUMP.length]), borderRadius:6, maxBarThickness:70}] },
-    options:{ layout:{padding:{top:20}}, plugins:{legend:{display:false},
+    data:{ labels: dumpTop.map(([k])=>hLabel(k)),
+      datasets:[{data:dumpTop.map(([,v])=>v), backgroundColor: dumpTop.map((_,i)=>VBAR_DUMP[i%VBAR_DUMP.length]), borderRadius:5, maxBarThickness:24}] },
+    options:{ indexAxis:'y', layout:{padding:{right:28}}, plugins:{legend:{display:false},
         tooltip:{callbacks:{title:(items)=> dumpTop[items[0].dataIndex][0]}}},
-      scales:vbarScales },
+      scales:hScales },
     plugins:[barValuePlugin]
   });
 
@@ -2740,11 +2763,11 @@ function renderTable(){
       <td>${escapeHtml(recordDay(r) || String(r.timestamp).slice(0,10))}</td>
       <td><span class="type-tag">${r.caseType==='dumping'?'ลักลอบทิ้ง':'โรงงาน'}</span></td>
       <td><span class="kind-tag ${kind}">${KIND_LABEL[r.recordKind]||'-'}</span></td>
-      <td>${escapeHtml(r.caseName||'-')}</td>
-      <td>${escapeHtml(r.tambon)} / ${escapeHtml(r.amphoe)}</td>
+      <td><div class="cell-clamp" title="${escapeHtml(r.caseName||'')}">${escapeHtml(r.caseName||'-')}</div></td>
+      <td><div class="loc-main">${escapeHtml(r.tambon||'-')}</div><div class="loc-sub">${escapeHtml(r.amphoe||'-')}</div></td>
       <td title="${escapeHtml(r.wasteType||'')}">${escapeHtml((r.wasteType||'-').slice(0,40))}${(r.wasteType||'').length>40?'…':''}</td>
       <td><span class="pill ${bucket}">${STATUS_LABEL[bucket]}</span></td>
-      <td>${escapeHtml(r.agency||'-')}</td>
+      <td><div class="cell-clamp" title="${escapeHtml(r.agency||'')}">${agencyHtml(r.agency)}</div></td>
       <td>${photosHtml(r,'sm')||'-'}</td>
       <td>
         <button type="button" class="btn-locate" data-locate="${idx}" ${r.lat==null||r.lng==null?'disabled':''}>
@@ -2812,6 +2835,13 @@ document.getElementById('chipDateMode').addEventListener('click', e=>{
 document.getElementById('fDateFrom').addEventListener('change', applyFilters);
 document.getElementById('fDateTo').addEventListener('change', applyFilters);
 document.getElementById('tableSearch').addEventListener('input', applyFilters);
+
+// แปลงลิงก์ยาวๆ ในช่องหน่วยงานเป็นคำว่า "ลิงก์" ที่กดเปิดได้ เพื่อไม่ให้ตารางเละ
+function agencyHtml(v){
+  const s = escapeHtml(v||'');
+  if(!s) return '-';
+  return s.replace(/https?:\/\/[^\s)]+/g, u=>'<a href="'+u+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">ลิงก์</a>');
+}
 
 // ---------- ส่งออกข้อมูลเป็นไฟล์ Excel (ตามตัวกรอง/คำค้นที่เลือกอยู่ ทุกหน้า) ----------
 document.getElementById('exportExcelBtn').addEventListener('click', ()=>{
