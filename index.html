@@ -729,6 +729,16 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 </head>
 <body data-theme="light">
+      <div class="exp-overlay" id="exportChoice">
+        <div class="exp-box" role="dialog" aria-modal="true">
+          <h3>เลือกรูปแบบไฟล์ที่จะนำออก</h3>
+          <p class="sub">ข้อมูลตามตัวกรองและคำค้นที่เลือกอยู่</p>
+          <button type="button" class="exp-opt" data-mode="raw"><b>ไฟล์ดิบ</b><span>หัวคอลัมน์และค่าเดิมจากชีตต้นฉบับ ไม่ผ่านการทำความสะอาด</span></button>
+          <button type="button" class="exp-opt" data-mode="clean"><b>ไฟล์ที่จัดระเบียบแล้ว</b><span>แบบเดิม: จัดกลุ่มประเภทของเสีย เพิ่มคอลัมน์ลักษณะ/กลุ่มสถานะ</span></button>
+          <button type="button" class="exp-cancel" data-mode="cancel">ยกเลิก</button>
+        </div>
+      </div>
+
 
 <nav class="topnav">
   <div class="topnav-inner">
@@ -3200,14 +3210,5 @@ applyFilters();
   try{ if(localStorage.getItem('filtersHidden')==='1') setHidden(true,false); }catch(e){}
 })();
 </script>
-      <div class="exp-overlay" id="exportChoice">
-        <div class="exp-box" role="dialog" aria-modal="true">
-          <h3>เลือกรูปแบบไฟล์ที่จะนำออก</h3>
-          <p class="sub">ข้อมูลตามตัวกรองและคำค้นที่เลือกอยู่</p>
-          <button type="button" class="exp-opt" data-mode="raw"><b>ไฟล์ดิบ</b><span>หัวคอลัมน์และค่าเดิมจากชีตต้นฉบับ ไม่ผ่านการทำความสะอาด</span></button>
-          <button type="button" class="exp-opt" data-mode="clean"><b>ไฟล์ที่จัดระเบียบแล้ว</b><span>แบบเดิม: จัดกลุ่มประเภทของเสีย เพิ่มคอลัมน์ลักษณะ/กลุ่มสถานะ</span></button>
-          <button type="button" class="exp-cancel" data-mode="cancel">ยกเลิก</button>
-        </div>
-      </div>
 </body>
 </html>
