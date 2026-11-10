@@ -637,6 +637,7 @@
     box-shadow:0 6px 16px -8px color-mix(in srgb, var(--clear) 80%, transparent);
   }
   .btn-export:hover{filter:brightness(1.07);}
+  .topnav-actions .btn-export{padding:7px 14px;border-radius:99px;font-size:12.5px;}
   .table-search{
     padding:9px 12px;border-radius:var(--radius-sm);
     border:1px solid var(--line);background:var(--surface-2);
@@ -729,6 +730,10 @@
       </div>
     </div>
     <div class="topnav-actions">
+      <button type="button" class="btn-export" id="exportExcelBtn" title="ส่งออกข้อมูลตามตัวกรองที่เลือกเป็นไฟล์ Excel">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      นำออก (Export) Excel
+      </button>
       <span class="live-badge" id="sourceIndicator"><span class="pulse"></span>ยังไม่มีข้อมูล</span>
       <span class="updated-text" id="lastUpdated">อัปเดตล่าสุด: —</span>
       <button class="icon-btn" id="themeToggle" title="สลับโหมดมืด/สว่าง">
@@ -1017,10 +1022,6 @@
           <h2 id="tableTitle" style="font-family:var(--font-display);font-weight:600;font-size:17px;margin:0;">รายการกรณีทั้งหมด</h2>
           <div class="table-tools">
             <input type="text" class="table-search" id="tableSearch" placeholder="ค้นหาในตาราง...">
-            <button type="button" class="btn-export" id="exportExcelBtn" title="ส่งออกข้อมูลตามตัวกรองที่เลือกเป็นไฟล์ Excel">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              นำออก (Export) Excel
-            </button>
           </div>
         </div>
         <div class="table-scroll">
