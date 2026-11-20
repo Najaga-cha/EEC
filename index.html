@@ -275,6 +275,22 @@
   .kpi-minis .kpi-mini:nth-child(1) .kpi-lbl{white-space:nowrap;}
   .kpi-group .kpi-main{min-height:170px;}
 
+  /* number sits at same height in every status card */
+  .kpi-sub,.kpi-mini,.kpi-total .kpi-mini{min-height:112px;}
+  .kpi-minis{grid-auto-rows:112px;}
+  .kpi-minis .kpi-mini{height:112px;}
+  .kpi-subs{grid-auto-rows:112px;}
+  .kpi-sub > div,.kpi-mini > div{align-self:flex-start;margin-top:30px;}
+  .kpi-sub .kpi-icon,.kpi-mini .kpi-icon{align-self:flex-start;margin-top:27px;}
+
+  /* roomier cards so 3-line labels don't touch the edge */
+  .kpi-sub,.kpi-mini,.kpi-total .kpi-mini{min-height:124px;}
+  .kpi-minis{grid-auto-rows:124px;}
+  .kpi-minis .kpi-mini{height:124px;}
+  .kpi-subs{grid-auto-rows:124px;}
+  .kpi-sub > div,.kpi-mini > div{margin-top:26px;}
+  .kpi-sub .kpi-icon,.kpi-mini .kpi-icon{margin-top:24px;}
+
 
   /* ---------- Filter panel toggle ---------- */
   .filter-toggle-bar{
